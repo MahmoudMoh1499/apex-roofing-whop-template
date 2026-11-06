@@ -127,13 +127,13 @@ const safeEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env)
 export const roofingCompanyConfig: RoofingCompanyConfig = {
   company: {
     name: "Apex Roofing Co.",
-    legalName: "Apex Premier Roofing & Construction LLC",
-    tagline: "Uncompromising Quality, Lasting Protection Since 2011",
-    shortDescription: "Certified, licensed, and bonded roofing professionals delivering residential and commercial roof replacement, repair, and certified inspections across the greater metropolitan area.",
+    legalName: "Apex Premier Roofing & Construction LLC (Fictional Demo Entity)",
+    tagline: "Uncompromising Quality, Lasting Protection (Customizable Template)",
+    shortDescription: "A production-grade, customizable website template for US roofing contractors built on Whop Websites, featuring Whop Elements, Setup Intents, Invoicing, and Leads integration.",
     foundedYear: 2011,
-    licenseNumber: "ROC-339842 / CC-88129",
+    licenseNumber: "SAMPLE-ROC-339842 (Demo Specification)",
     bondedAndInsured: true,
-    coverageAmount: "$2,000,000 General Liability",
+    coverageAmount: "Sample $2,000,000 Liability Specification",
   },
   contact: {
     phone: "+18005557663",
@@ -350,26 +350,26 @@ export const roofingCompanyConfig: RoofingCompanyConfig = {
   trustBadges: [
     {
       id: "badge-1",
-      title: "Licensed & Bonded",
-      subtitle: "State Certified ROC-339842",
+      title: "Sample License Spec",
+      subtitle: "Configurable State ROC",
       iconName: "ShieldCheck",
     },
     {
       id: "badge-2",
-      title: "$2M Liability Insured",
-      subtitle: "Complete Property Protection",
+      title: "Sample Liability Spec",
+      subtitle: "$2M General Liability Policy",
       iconName: "FileCheck",
     },
     {
       id: "badge-3",
-      title: "Lifetime Workmanship",
-      subtitle: "Transferable Warranty Guarantee",
+      title: "Sample Warranty Spec",
+      subtitle: "50-Yr Material Warranty",
       iconName: "Award",
     },
     {
       id: "badge-4",
-      title: "24/7 Storm Dispatch",
-      subtitle: "Emergency Response Fleet",
+      title: "Emergency Fleet Spec",
+      subtitle: "24/7 Dispatch Dispatch Ready",
       iconName: "Clock",
     },
   ],

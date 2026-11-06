@@ -22,15 +22,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-1 rounded bg-brand-500/20 px-2 py-0.5 font-semibold text-brand-300">
               <span className="size-1.5 rounded-full bg-brand-400 animate-pulse"></span>
-              24/7 Storm Response
+              Demonstration Template
             </span>
             <span className="hidden sm:inline text-slate-400">
-              Emergency Dispatch Available Across All Service Areas
+              Customizable Roofing Contractor Template for Whop Websites
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="hidden md:inline text-slate-400">
-              Lic: <span className="text-slate-200">{company.licenseNumber}</span>
+            <span className="hidden md:inline text-slate-400 text-[11px]">
+              {company.licenseNumber}
             </span>
             <a
               href={`tel:${contact.phone}`}
@@ -55,7 +55,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               {company.name}
             </span>
             <span className="text-[11px] font-medium uppercase tracking-wider text-slate-400">
-              Licensed & Bonded Roofing
+              Whop Websites Template
             </span>
           </div>
         </a>

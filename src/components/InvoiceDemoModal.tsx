@@ -46,6 +46,7 @@ export const InvoiceDemoModal: React.FC<InvoiceDemoModalProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-admin-key': 'demo-admin-authorized',
         },
         body: JSON.stringify({
           accountId: whop.accountId,

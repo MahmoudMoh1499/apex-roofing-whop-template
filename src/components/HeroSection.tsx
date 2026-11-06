@@ -28,7 +28,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             {/* Trust Pill */}
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/80 px-3.5 py-1.5 text-xs font-medium text-slate-300 shadow-inner">
               <span className="flex size-2 rounded-full bg-emerald-400" />
-              <span>Ranked #1 Certified Roofing Contractor in Metro Service Zone</span>
+              <span>Demo Showcase: Production-Quality Roofing Contractor Template for Whop Websites</span>
             </div>
 
             {/* Headline */}

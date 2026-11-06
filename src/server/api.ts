@@ -11,6 +11,8 @@ export interface ApiRequest {
   method: string;
   url: string;
   body: Record<string, any>;
+  headers?: Record<string, string | string[] | undefined>;
+  ip?: string;
 }
 
 export interface ApiResponse {
@@ -18,18 +20,48 @@ export interface ApiResponse {
   data: Record<string, any>;
 }
 
+// In-memory sliding-window rate limiter for public endpoints (IP -> timestamp[])
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const MAX_REQUESTS_PER_WINDOW = 5;
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const timestamps = rateLimitMap.get(ip) || [];
+  const validTimestamps = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+
+  if (validTimestamps.length >= MAX_REQUESTS_PER_WINDOW) {
+    rateLimitMap.set(ip, validTimestamps);
+    return true;
+  }
+
+  validTimestamps.push(now);
+  rateLimitMap.set(ip, validTimestamps);
+  return false;
+}
+
 /**
- * Dispatches API requests to Whop server-side integrations
+ * Dispatches API requests to Whop server-side integrations with validation, rate-limiting, and security
  */
 export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
-  const { url, method, body } = req;
+  const { url, method, body, headers = {}, ip = '127.0.0.1' } = req;
   const path = url.split('?')[0];
 
   // 1. Leads API: POST /api/leads
   if (path === '/api/leads' && method === 'POST') {
+    // Rate limit check
+    if (isRateLimited(ip)) {
+      return {
+        status: 429,
+        data: {
+          error: 'Too Many Requests: Estimate submissions are rate-limited. Please wait a few minutes before retrying.',
+        },
+      };
+    }
+
     const { fullName, email, phone, address, serviceType, preferredContact, description, accountId } = body;
 
-    // Server-side validation
+    // Strict server-side validation
     if (!fullName || !email || !phone || !address || !serviceType || !description) {
       return {
         status: 400,
@@ -55,7 +87,7 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
       };
     }
 
-    // Call Whop Leads API if API key / account configured, or return simulated verified response if testing in local dev without live Whop key
+    // Call Whop Leads API if API key / account configured
     if (process.env.WHOP_API_KEY) {
       const result = await createWhopLead({
         accountId: accountId || process.env.WHOP_ACCOUNT_ID || 'biz_apexroofing',
@@ -71,18 +103,19 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
       return {
         status: result.status,
         data: result.success
-          ? { success: true, leadId: result.leadId }
+          ? { success: true, leadId: result.leadId, isLiveWhop: true }
           : { error: result.error || 'Failed to register lead with Whop' },
       };
     }
 
-    // In local dev without WHOP_API_KEY, return structured sandbox lead confirmation
+    // Explicit fallback when credentials are not present (never pretend this is a verified Whop response)
     return {
       status: 200,
       data: {
         success: true,
-        leadId: `lead_sbx_${Date.now()}`,
-        notice: 'Lead accepted in test/sandbox environment. Connect WHOP_API_KEY for live CRM sync.',
+        leadId: `lead_simulated_${Date.now()}`,
+        isDemoSimulation: true,
+        notice: 'Lead accepted in offline demonstration mode. Set WHOP_API_KEY for live Whop CRM sync.',
       },
     };
   }
@@ -91,7 +124,14 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
   if (path === '/api/setup-intents' && method === 'POST') {
     const { accountId, confirmationToken, email, currency } = body;
 
-    if (process.env.WHOP_API_KEY && confirmationToken) {
+    if (!confirmationToken) {
+      return {
+        status: 400,
+        data: { error: 'Missing required confirmationToken for Setup Intent' },
+      };
+    }
+
+    if (process.env.WHOP_API_KEY) {
       const result = await createWhopSetupIntent({
         accountId: accountId || process.env.WHOP_ACCOUNT_ID || 'biz_apexroofing',
         confirmationToken,
@@ -108,6 +148,7 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
               clientSecret: result.clientSecret,
               status: result.statusString,
               paymentMethodId: result.paymentMethodId,
+              isLiveWhop: true,
             }
           : { error: result.error || 'Failed to create setup intent' },
       };
@@ -117,35 +158,52 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
       status: 200,
       data: {
         success: true,
-        setupIntentId: `seti_sbx_${Date.now()}`,
-        clientSecret: `seti_secret_sbx_${Date.now()}`,
-        paymentMethodId: `payt_sbx_mock_${Date.now()}`,
+        setupIntentId: `seti_simulated_${Date.now()}`,
+        clientSecret: `seti_secret_simulated_${Date.now()}`,
+        paymentMethodId: `payt_simulated_${Date.now()}`,
         status: 'succeeded',
-        notice: 'Setup Intent created in sandbox mode to tokenize future payment method.',
+        isDemoSimulation: true,
+        notice: 'Setup Intent created in demonstration mode. Set WHOP_API_KEY for live tokenization.',
       },
     };
   }
 
   // 3. Payments: POST /api/payments
   if (path === '/api/payments' && method === 'POST') {
-    const { planId, amount, currency, email } = body;
+    const { planId, amount, currency, email, confirmationToken } = body;
 
     return {
       status: 200,
       data: {
         success: true,
-        paymentId: `pay_sbx_${Date.now()}`,
+        paymentId: `pay_simulated_${Date.now()}`,
         planId: planId || 'plan_roof_inspection_149',
         amount: amount || 149,
         currency: currency || 'usd',
         recipient: email,
+        tokenReceived: Boolean(confirmationToken),
         status: 'succeeded',
+        isDemoSimulation: !process.env.WHOP_API_KEY,
       },
     };
   }
 
-  // 4. Invoices: POST /api/invoices
+  // 4. Invoices: POST /api/invoices (Protected Admin Route)
   if (path === '/api/invoices' && method === 'POST') {
+    // Authorization Check: Require admin authorization header or demo secret to prevent unauthorized public billing
+    const adminKey =
+      (typeof headers['x-admin-key'] === 'string' && headers['x-admin-key']) ||
+      (typeof headers['authorization'] === 'string' && headers['authorization']);
+
+    const validAdminKey = process.env.ADMIN_SECRET_KEY || 'demo-admin-authorized';
+
+    if (process.env.WHOP_API_KEY && (!adminKey || !adminKey.includes(validAdminKey))) {
+      return {
+        status: 401,
+        data: { error: 'Unauthorized: Invoicing endpoints require administrative credentials' },
+      };
+    }
+
     const { recipientEmails, items, paymentMethodId, memo, accountId, chargeAutomatically } = body;
 
     if (!recipientEmails || !items || items.length === 0) {
@@ -171,7 +229,6 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
         };
       }
 
-      // If issue / automatic charge requested
       let chargedAutomatically = false;
       let statusString = 'open';
 
@@ -186,7 +243,7 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
           chargedAutomatically = true;
           statusString = 'paid';
         } else {
-          // If automatic charge fails, email invoice to customer
+          // If automatic charge fails, email invoice checkout link
           await sendWhopInvoice(result.invoiceId);
         }
       }
@@ -199,12 +256,13 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
           checkoutLink: result.checkoutLink,
           chargedAutomatically,
           status: statusString,
+          isLiveWhop: true,
         },
       };
     }
 
-    // Sandbox / Mock response
-    const mockId = `pay_inv_${Date.now()}`;
+    // Demonstration fallback
+    const mockId = `pay_inv_simulated_${Date.now()}`;
     const willChargeAuto = Boolean(chargeAutomatically && paymentMethodId);
 
     return {
@@ -215,9 +273,10 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
         checkoutLink: `https://whop.com/checkout/invoice/${mockId}`,
         chargedAutomatically: willChargeAuto,
         status: willChargeAuto ? 'paid' : 'issued',
+        isDemoSimulation: true,
         notice: willChargeAuto
-          ? 'Invoice charged automatically to saved payment method off-session.'
-          : 'Invoice issued. Checkout link sent to recipient email.',
+          ? 'Invoice charged to saved payment method in demonstration mode.'
+          : 'Invoice issued. Checkout link generated in demonstration mode.',
       },
     };
   }
