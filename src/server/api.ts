@@ -11,6 +11,9 @@ import {
 import { checkRateLimit } from './rateLimiter.ts';
 import { verifyWhopWebhook } from '../lib/webhookVerification.ts';
 import { getApexDb } from './db.ts';
+import { WhopEventsService } from './services/WhopEventsService.ts';
+
+export const whopEventsService = new WhopEventsService();
 
 export interface ApiRequest {
   method: string;
@@ -124,6 +127,25 @@ export async function handleApiRoute(req: ApiRequest, env?: any): Promise<ApiRes
         apiKey
       );
 
+      if (result.success && result.leadId) {
+        // Trigger server-side Whop Events API: estimate_requested
+        // Strictly after successful validation and confirmed backend Lead creation
+        await whopEventsService.trackEstimateRequested(
+          {
+            leadId: result.leadId,
+            serviceType,
+            preferredContact: preferredContact || 'phone',
+            postalCode: address.match(/\b\d{5}\b/)?.[0],
+            email,
+            fullName,
+            phone,
+            city: address.split(',')[1]?.trim(),
+            state: address.split(',')[2]?.trim()?.slice(0, 2),
+          },
+          apiKey
+        );
+      }
+
       return {
         status: result.status,
         data: result.success
@@ -139,11 +161,25 @@ export async function handleApiRoute(req: ApiRequest, env?: any): Promise<ApiRes
 
     // Fail closed if unconfigured outside of offline testing
     if (process.env.NODE_ENV === 'test') {
+      const simulatedLeadId = `lead_simulated_${Date.now()}`;
+      await whopEventsService.trackEstimateRequested(
+        {
+          leadId: simulatedLeadId,
+          serviceType,
+          preferredContact: preferredContact || 'phone',
+          postalCode: address.match(/\b\d{5}\b/)?.[0],
+          email,
+          fullName,
+          phone,
+        },
+        apiKey
+      );
+
       return {
         status: 200,
         data: {
           success: true,
-          leadId: `lead_simulated_${Date.now()}`,
+          leadId: simulatedLeadId,
           isDemoSimulation: true,
         },
       };
@@ -252,6 +288,19 @@ export async function handleApiRoute(req: ApiRequest, env?: any): Promise<ApiRes
       status: 'pending',
       idempotency_key: idempotencyKey,
     });
+
+    // Trigger server-side deposit_started event if this is a deposit reservation
+    if (planId === 'plan_8Z1S3Yw1WjX4a' || body.setupFutureUsage === 'off_session') {
+      await whopEventsService.trackDepositStarted(
+        {
+          planId: planId || 'plan_8Z1S3Yw1WjX4a',
+          amount: typeof amount === 'number' ? amount : 500,
+          currency: (currency || 'usd').toLowerCase(),
+          email,
+        },
+        apiKey
+      );
+    }
 
     if (apiKey) {
       const result = await createWhopPayment(
@@ -540,6 +589,75 @@ export async function handleApiRoute(req: ApiRequest, env?: any): Promise<ApiRes
         data: { error: 'Failed to process webhook event' },
       };
     }
+  }
+
+  // 6. Server-Side Events API: POST /api/events
+  if (path === '/api/events' && method === 'POST') {
+    const { eventName, payload } = body;
+
+    if (!eventName || !payload) {
+      return {
+        status: 400,
+        data: { error: 'Validation failed: Missing required eventName or payload' },
+      };
+    }
+
+    if (eventName === 'service_viewed') {
+      if (!payload.serviceId || !payload.serviceTitle) {
+        return {
+          status: 400,
+          data: { error: 'Validation failed: service_viewed requires serviceId and serviceTitle' },
+        };
+      }
+      const eventResult = await whopEventsService.trackServiceViewed(
+        {
+          serviceId: payload.serviceId,
+          serviceTitle: payload.serviceTitle,
+          price: payload.price,
+          url: payload.url,
+          idempotencyKey: payload.idempotencyKey,
+        },
+        apiKey
+      );
+
+      return {
+        status: eventResult.status || 200,
+        data: eventResult,
+      };
+    }
+
+    if (eventName === 'deposit_started') {
+      if (!payload.planId || typeof payload.amount !== 'number') {
+        return {
+          status: 400,
+          data: { error: 'Validation failed: deposit_started requires planId and numeric amount' },
+        };
+      }
+      const eventResult = await whopEventsService.trackDepositStarted(
+        {
+          planId: payload.planId,
+          amount: payload.amount,
+          currency: payload.currency || 'usd',
+          serviceName: payload.serviceName,
+          email: payload.email,
+          url: payload.url,
+          idempotencyKey: payload.idempotencyKey,
+        },
+        apiKey
+      );
+
+      return {
+        status: eventResult.status || 200,
+        data: eventResult,
+      };
+    }
+
+    return {
+      status: 400,
+      data: {
+        error: `Unsupported eventName: ${eventName}. Must be 'service_viewed' or 'deposit_started'`,
+      },
+    };
   }
 
   return {
