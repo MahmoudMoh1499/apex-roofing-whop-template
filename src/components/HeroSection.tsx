@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, CheckCircle2, ShieldCheck, Award, Star, Calendar } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ShieldCheck, Award, Star, Calendar, ExternalLink } from 'lucide-react';
 import { roofingCompanyConfig } from '../config/roofingCompany';
 
 interface HeroSectionProps {
@@ -71,13 +71,24 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 <ArrowRight className="size-5" />
               </button>
 
-              <button
-                onClick={onOpenInspectionCheckout}
-                className="inline-flex items-center justify-center gap-2.5 rounded-xl border border-slate-700 bg-slate-900/90 px-6 py-4 text-base font-semibold text-slate-200 hover:bg-slate-800 hover:border-slate-600 active:scale-[0.98] transition-all"
-              >
-                <Calendar className="size-5 text-brand-400" />
-                <span>Book $149 Inspection</span>
-              </button>
+              <div className="flex flex-col">
+                <button
+                  onClick={onOpenInspectionCheckout}
+                  className="inline-flex items-center justify-center gap-2.5 rounded-xl border border-slate-700 bg-slate-900/90 px-6 py-4 text-base font-semibold text-slate-200 hover:bg-slate-800 hover:border-slate-600 active:scale-[0.98] transition-all"
+                >
+                  <Calendar className="size-5 text-brand-400" />
+                  <span>Book $149 Inspection</span>
+                </button>
+                <a
+                  href="https://whop.com/checkout/plan_2KwvDItyoRemP"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-brand-300 transition-colors mt-2"
+                >
+                  <span>Instant checkout on Whop hosted link</span>
+                  <ExternalLink className="size-3" />
+                </a>
+              </div>
             </div>
 
             {/* Quick Proof Badges */}
@@ -149,6 +160,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   >
                     Checkout with Whop Elements
                   </button>
+                  <a
+                    href="https://whop.com/checkout/plan_2KwvDItyoRemP"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 flex items-center justify-center gap-1 text-[11px] text-brand-400 hover:text-brand-300 transition-colors"
+                  >
+                    <span>Or use Whop Checkout Link</span>
+                    <ExternalLink className="size-3" />
+                  </a>
                 </div>
               </div>
 

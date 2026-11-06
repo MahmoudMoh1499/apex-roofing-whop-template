@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ShieldCheck, Lock, CheckCircle2, AlertCircle, CreditCard, Sparkles, Zap } from 'lucide-react';
+import { X, ShieldCheck, Lock, CheckCircle2, AlertCircle, CreditCard, Sparkles, Zap, ExternalLink } from 'lucide-react';
 import {
   WhopElements,
   Payments,
@@ -40,6 +40,7 @@ interface InnerCheckoutFormProps {
     amount: number;
     currency: string;
     description: string;
+    checkoutUrl?: string;
   };
   buyerName: string;
   setBuyerName: (v: string) => void;
@@ -336,6 +337,20 @@ const InnerCheckoutForm: React.FC<InnerCheckoutFormProps> = ({
           Apple Pay & Cards Accepted
         </span>
       </div>
+
+      {planConfig.checkoutUrl && (
+        <div className="pt-2 text-center border-t border-slate-800/60 mt-2">
+          <a
+            href={planConfig.checkoutUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-brand-400 hover:text-brand-300 hover:underline transition-colors"
+          >
+            <span>Prefer paying on Whop's hosted portal? Open Whop Checkout Page</span>
+            <ExternalLink className="size-3" />
+          </a>
+        </div>
+      )}
     </form>
   );
 };
