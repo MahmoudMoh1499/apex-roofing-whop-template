@@ -49,11 +49,48 @@ function apiMiddlewarePlugin(): Plugin {
   };
 }
 
+import { existsSync, copyFileSync } from "node:fs";
+import { build as esbuildBuild } from "esbuild";
+
+function workerBuildPlugin(): Plugin {
+  return {
+    name: "worker-build-plugin",
+    async writeBundle() {
+      await esbuildBuild({
+        entryPoints: ["src/server/worker.ts"],
+        bundle: true,
+        platform: "neutral",
+        target: "es2022",
+        format: "esm",
+        external: ["node:*"],
+        outfile: "dist/client/server/index.js",
+      });
+      await esbuildBuild({
+        entryPoints: ["src/server/worker.ts"],
+        bundle: true,
+        platform: "neutral",
+        target: "es2022",
+        format: "esm",
+        external: ["node:*"],
+        outfile: "dist/server/index.js",
+      });
+    },
+    closeBundle() {
+      const clientZip = "dist/client/whop-build.zip";
+      const rootZip = "dist/whop-build.zip";
+      if (existsSync(clientZip)) {
+        copyFileSync(clientZip, rootZip);
+      }
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
     cloudflare(),
     react(),
     apiMiddlewarePlugin(),
+    workerBuildPlugin(),
     whop(),
   ],
   resolve: {

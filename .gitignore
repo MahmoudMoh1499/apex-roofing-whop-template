@@ -29,3 +29,9 @@ pnpm-debug.log*
 # Cloudflare / Wrangler
 .wrangler/
 
+# Recordings & Videos
+recordings/
+submission/*.mp4
+*.webm
+*.mp4
+

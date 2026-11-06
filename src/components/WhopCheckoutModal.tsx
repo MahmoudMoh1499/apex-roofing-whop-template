@@ -17,11 +17,19 @@ import { trackDepositStarted } from '../lib/tracking';
 
 export type CheckoutMode = 'inspection' | 'deposit';
 
+export interface PaymentSuccessResult {
+  type: CheckoutMode;
+  id?: string;
+  paymentMethodId?: string;
+  memberId?: string;
+  customerEmail?: string;
+}
+
 interface WhopCheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: CheckoutMode;
-  onPaymentSuccess?: (result: { type: string; id?: string }) => void;
+  onPaymentSuccess?: (result: PaymentSuccessResult) => void;
 }
 
 interface InnerCheckoutFormProps {
@@ -51,7 +59,7 @@ interface InnerCheckoutFormProps {
   setIsLoading: (v: boolean) => void;
   errorMessage: string | null;
   setErrorMessage: (v: string | null) => void;
-  onSuccess: (refId: string, msg: string, setupIntentId?: string) => void;
+  onSuccess: (refId: string, msg: string, paymentMethodId?: string, memberId?: string) => void;
 }
 
 // Inner payment controller component rendered INSIDE <Payments> to access usePayments()
@@ -124,9 +132,7 @@ const InnerCheckoutForm: React.FC<InnerCheckoutFormProps> = ({
       }
 
       // Step 2: Submit to server endpoint with tokenized credentials
-      const endpoint = isDeposit ? '/api/setup-intents' : '/api/payments';
-      
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/payments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +153,7 @@ const InnerCheckoutForm: React.FC<InnerCheckoutFormProps> = ({
             postal_code: buyerZip,
             country: 'US',
           },
-          mode: isDeposit ? 'setup' : 'payment',
+          setupFutureUsage: isDeposit ? 'off_session' : undefined,
         }),
       });
 
@@ -157,12 +163,12 @@ const InnerCheckoutForm: React.FC<InnerCheckoutFormProps> = ({
         throw new Error(data.error || `Payment processing encountered an error (${response.status})`);
       }
 
-      const refId = data.setupIntentId || data.paymentId || `whop_${Date.now()}`;
+      const refId = data.paymentId || data.setupIntentId || `whop_${Date.now()}`;
       const successMsg = isDeposit
         ? 'Project Deposit ($500) successfully confirmed and payment method saved for milestone billing.'
         : 'Inspection Payment ($149) successfully authorized. Your 21-point drone audit is booked!';
 
-      onSuccess(refId, successMsg, data.setupIntentId);
+      onSuccess(refId, successMsg, data.paymentMethodId, data.memberId);
     } catch (err) {
       console.error('Whop checkout error:', err);
       setErrorMessage((err as Error).message || 'Payment step failed. Please verify billing details.');
@@ -350,7 +356,8 @@ export const WhopCheckoutModal: React.FC<WhopCheckoutModalProps> = ({
   const [successResult, setSuccessResult] = useState<{
     referenceId: string;
     message: string;
-    setupIntentId?: string;
+    paymentMethodId?: string;
+    memberId?: string;
   } | null>(null);
 
   // Billing form details
@@ -380,15 +387,22 @@ export const WhopCheckoutModal: React.FC<WhopCheckoutModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSuccess = (refId: string, msg: string, setupIntentId?: string) => {
+  const handleSuccess = (refId: string, msg: string, paymentMethodId?: string, memberId?: string) => {
     setSuccessResult({
       referenceId: refId,
       message: msg,
-      setupIntentId,
+      paymentMethodId,
+      memberId,
     });
 
     if (onPaymentSuccess) {
-      onPaymentSuccess({ type: mode, id: refId });
+      onPaymentSuccess({
+        type: mode,
+        id: refId,
+        paymentMethodId,
+        memberId,
+        customerEmail: buyerEmail,
+      });
     }
   };
 
@@ -551,8 +565,9 @@ export const WhopCheckoutModal: React.FC<WhopCheckoutModalProps> = ({
                 {isDeposit ? (
                   <Payments
                     accountId={whop.accountId}
-                    mode="setup"
-                    currency="usd"
+                    plan={planConfig.id}
+                    mode="payment"
+                    setupFutureUsage="off_session"
                   >
                     <InnerCheckoutForm
                       isDeposit={isDeposit}

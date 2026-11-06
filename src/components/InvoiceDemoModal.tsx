@@ -31,6 +31,8 @@ export const InvoiceDemoModal: React.FC<InvoiceDemoModalProps> = ({
     checkoutLink?: string;
     chargedAutomatically: boolean;
     status: string;
+    accountVerificationRequired?: boolean;
+    notice?: string;
   } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -40,7 +42,7 @@ export const InvoiceDemoModal: React.FC<InvoiceDemoModalProps> = ({
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage(null);
-    setStatusMessage('Drafting invoice with Whop Invoices API...');
+    setStatusMessage('Drafting $4,500 milestone invoice with Whop Invoices API...');
 
     try {
       const response = await fetch('/api/invoices', {
@@ -53,19 +55,20 @@ export const InvoiceDemoModal: React.FC<InvoiceDemoModalProps> = ({
           accountId: whop.accountId,
           recipientEmails: [email],
           customerEmail: email,
+          customerName: 'Apex Project Client',
           paymentMethodId: paymentMethodId.trim() || undefined,
           chargeAutomatically: chargeAuto && Boolean(paymentMethodId.trim()),
           items: [
             {
+              variant_id: 'plan_0CImbqaHxL27Q',
               quantity: 1,
-              variant: {
-                title: projectTitle,
-                price: parseFloat(balanceAmount) || 4500,
-                currency: 'usd',
-              },
+            },
+            {
+              variant_id: 'plan_zfQonb2jocdhm',
+              quantity: 1,
             },
           ],
-          memo: `${company.name} - Completion of roofing installation. Thank you for your business!`,
+          memo: `${company.name} - Roof Replacement Final Milestone Invoice - Remaining Project Balance`,
         }),
       });
 
@@ -79,7 +82,9 @@ export const InvoiceDemoModal: React.FC<InvoiceDemoModalProps> = ({
         invoiceId: data.invoiceId || `pay_demo_${Date.now()}`,
         checkoutLink: data.checkoutLink,
         chargedAutomatically: data.chargedAutomatically || false,
-        status: data.status || 'issued',
+        status: data.status || 'draft',
+        accountVerificationRequired: data.accountVerificationRequired,
+        notice: data.notice,
       });
     } catch (err) {
       console.error('Invoice error:', err);
@@ -129,13 +134,17 @@ export const InvoiceDemoModal: React.FC<InvoiceDemoModalProps> = ({
               </div>
 
               <h4 className="text-xl font-bold text-white">
-                {invoiceResult.chargedAutomatically
+                {invoiceResult.accountVerificationRequired
+                  ? 'Official Whop Draft Invoice Created!'
+                  : invoiceResult.chargedAutomatically
                   ? 'Invoice Charged Successfully to Saved Card!'
                   : 'Invoice Issued & Sent to Customer'}
               </h4>
 
               <p className="text-xs text-slate-300 max-w-sm mx-auto leading-relaxed">
-                {invoiceResult.chargedAutomatically
+                {invoiceResult.accountVerificationRequired
+                  ? 'Whop Invoices API successfully recorded the draft invoice with official milestone line items totaling $4,500.00 USD.'
+                  : invoiceResult.chargedAutomatically
                   ? 'Whop Invoices API executed an off-session charge using the customer tokenized payment method.'
                   : 'An open invoice was generated. If automatic charging declined or card authentication is required, customer receives the checkout link.'}
               </p>
@@ -146,13 +155,23 @@ export const InvoiceDemoModal: React.FC<InvoiceDemoModalProps> = ({
                   <span className="font-mono text-emerald-400">{invoiceResult.invoiceId}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Status:</span>
+                  <span className="text-slate-400">Whop Object:</span>
                   <span className="font-semibold text-white uppercase">{invoiceResult.status}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Total Billed:</span>
-                  <span className="font-bold text-white">${balanceAmount}.00 USD</span>
+                  <span className="font-bold text-white">$4,500.00 USD</span>
                 </div>
+                <div className="flex justify-between border-t border-slate-800 pt-2 text-[11px]">
+                  <span className="text-slate-400">Line Items:</span>
+                  <span className="text-slate-300 text-right">Roof Replacement ($2,500) + Final ($2,000)</span>
+                </div>
+                {invoiceResult.accountVerificationRequired && (
+                  <div className="pt-2 border-t border-slate-800 text-[11px] text-amber-300 leading-normal">
+                    <span className="font-semibold block text-amber-200 mb-0.5">Whop Platform Verification:</span>
+                    Whop requires merchant KYC verification before issuing or charging outbound invoices. The draft invoice is recorded on your Whop business account.
+                  </div>
+                )}
                 {invoiceResult.checkoutLink && (
                   <div className="pt-2 border-t border-slate-800">
                     <span className="text-slate-400 block mb-1">Pay Now Checkout URL:</span>

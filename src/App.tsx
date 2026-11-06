@@ -22,6 +22,11 @@ export const App: React.FC = () => {
 
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [estimateServicePrefill, setEstimateServicePrefill] = useState<string | undefined>(undefined);
+  const [savedCustomerInfo, setSavedCustomerInfo] = useState<{
+    email?: string;
+    paymentMethodId?: string;
+    memberId?: string;
+  }>({});
 
   const scrollToEstimate = (serviceTitle?: string) => {
     if (serviceTitle) {
@@ -103,12 +108,23 @@ export const App: React.FC = () => {
         isOpen={checkoutModal.isOpen}
         onClose={() => setCheckoutModal({ ...checkoutModal, isOpen: false })}
         mode={checkoutModal.mode}
+        onPaymentSuccess={(result) => {
+          if (result.paymentMethodId || result.customerEmail) {
+            setSavedCustomerInfo({
+              email: result.customerEmail,
+              paymentMethodId: result.paymentMethodId,
+              memberId: result.memberId,
+            });
+          }
+        }}
       />
 
       {/* Final Balance Invoicing Portal Modal */}
       <InvoiceDemoModal
         isOpen={isInvoiceModalOpen}
         onClose={() => setIsInvoiceModalOpen(false)}
+        savedPaymentMethodId={savedCustomerInfo.paymentMethodId}
+        customerEmail={savedCustomerInfo.email || 'customer@example.com'}
       />
     </div>
   );
