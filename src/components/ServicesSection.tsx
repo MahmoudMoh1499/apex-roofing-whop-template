@@ -9,7 +9,8 @@ import {
   Clock,
   Layers,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  ExternalLink,
 } from 'lucide-react';
 import { roofingCompanyConfig, RoofingService } from '../config/roofingCompany';
 import { trackServiceViewed } from '../lib/tracking';
@@ -214,6 +215,18 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
                         </>
                       )}
                     </button>
+
+                    {service.checkoutUrl && (
+                      <a
+                        href={service.checkoutUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-1.5 text-xs text-brand-400 hover:text-brand-300 transition-colors py-1 hover:underline"
+                      >
+                        <span>Or pay directly on Whop Hosted Checkout</span>
+                        <ExternalLink className="size-3.5" />
+                      </a>
+                    )}
                   </div>
 
                 </div>

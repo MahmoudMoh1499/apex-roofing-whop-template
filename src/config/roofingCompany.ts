@@ -11,6 +11,7 @@ export interface RoofingService {
   popular?: boolean;
   whopPlanId?: string;
   checkoutType?: 'inspection' | 'deposit' | 'custom' | 'quote';
+  checkoutUrl?: string;
   image: string;
 }
 
@@ -87,6 +88,7 @@ export interface RoofingCompanyConfig {
         amount: number; // in USD
         currency: string;
         billingType: 'one_time';
+        checkoutUrl: string;
         description: string;
       };
       projectDeposit: {
@@ -96,6 +98,7 @@ export interface RoofingCompanyConfig {
         currency: string;
         billingType: 'one_time';
         mode: 'setup';
+        checkoutUrl: string;
         description: string;
       };
       flatRateService: {
@@ -104,6 +107,7 @@ export interface RoofingCompanyConfig {
         amount: number; // in USD
         currency: string;
         billingType: 'one_time';
+        checkoutUrl: string;
         description: string;
       };
     };
@@ -162,6 +166,7 @@ export const roofingCompanyConfig: RoofingCompanyConfig = {
         amount: 149,
         currency: "USD",
         billingType: "one_time",
+        checkoutUrl: "https://whop.com/checkout/plan_2KwvDItyoRemP",
         description: "Full drone & physical diagnostic inspection, attic moisture scan, photographic damage report, and itemized repair estimate.",
       },
       projectDeposit: {
@@ -171,6 +176,7 @@ export const roofingCompanyConfig: RoofingCompanyConfig = {
         currency: "USD",
         billingType: "one_time",
         mode: "setup",
+        checkoutUrl: "https://whop.com/checkout/plan_8Z1S3Yw1WjX4a",
         description: "Secures project scheduling, locks in wholesale material pricing, and establishes customer payment method for final project balance upon completion.",
       },
       flatRateService: {
@@ -179,6 +185,7 @@ export const roofingCompanyConfig: RoofingCompanyConfig = {
         amount: 899,
         currency: "USD",
         billingType: "one_time",
+        checkoutUrl: "https://whop.com/checkout/plan_i2sQTyDeCoYq3",
         description: "Up to 100 sq ft architectural shingle repair, pipe boot replacement, leak sealing, and post-repair weatherproofing guarantee.",
       },
     },
@@ -206,6 +213,7 @@ export const roofingCompanyConfig: RoofingCompanyConfig = {
       turnaroundTime: "24-48 Hours",
       whopPlanId: "plan_roof_inspection_149",
       checkoutType: "inspection",
+      checkoutUrl: "https://whop.com/checkout/plan_2KwvDItyoRemP",
       image: "https://images.unsplash.com/photo-1632759145351-1d592919f522?auto=format&fit=crop&w=1200&q=80",
     },
     {
@@ -231,6 +239,7 @@ export const roofingCompanyConfig: RoofingCompanyConfig = {
       popular: true,
       whopPlanId: "plan_flat_rate_repair_899",
       checkoutType: "custom",
+      checkoutUrl: "https://whop.com/checkout/plan_i2sQTyDeCoYq3",
       image: "https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=1200&q=80",
     },
     {
@@ -255,6 +264,7 @@ export const roofingCompanyConfig: RoofingCompanyConfig = {
       turnaroundTime: "1-2 Days On-Site",
       whopPlanId: "plan_project_deposit_500",
       checkoutType: "deposit",
+      checkoutUrl: "https://whop.com/checkout/plan_8Z1S3Yw1WjX4a",
       image: "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=1200&q=80",
     },
   ],
