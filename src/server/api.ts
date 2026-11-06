@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import {
   createWhopLead,
   createWhopSetupIntent,
@@ -6,6 +7,7 @@ import {
   chargeWhopInvoice,
   sendWhopInvoice,
 } from '../lib/whopServer.ts';
+import { checkRateLimit } from './rateLimiter.ts';
 
 export interface ApiRequest {
   method: string;
@@ -20,24 +22,15 @@ export interface ApiResponse {
   data: Record<string, any>;
 }
 
-// In-memory sliding-window rate limiter for public endpoints (IP -> timestamp[])
-const rateLimitMap = new Map<string, number[]>();
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
-const MAX_REQUESTS_PER_WINDOW = 5;
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const timestamps = rateLimitMap.get(ip) || [];
-  const validTimestamps = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
-
-  if (validTimestamps.length >= MAX_REQUESTS_PER_WINDOW) {
-    rateLimitMap.set(ip, validTimestamps);
-    return true;
-  }
-
-  validTimestamps.push(now);
-  rateLimitMap.set(ip, validTimestamps);
-  return false;
+/**
+ * Timing-safe string comparison to protect against side-channel timing attacks
+ * Hashes inputs with SHA-256 before timingSafeEqual to ensure fixed 32-byte buffers.
+ */
+function timingSafeMatch(provided: string, expected: string): boolean {
+  if (!provided || !expected) return false;
+  const hashProvided = crypto.createHash('sha256').update(provided).digest();
+  const hashExpected = crypto.createHash('sha256').update(expected).digest();
+  return crypto.timingSafeEqual(hashProvided, hashExpected);
 }
 
 /**
@@ -49,12 +42,14 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
 
   // 1. Leads API: POST /api/leads
   if (path === '/api/leads' && method === 'POST') {
-    // Rate limit check
-    if (isRateLimited(ip)) {
+    // Distributed rate limit check (Cloudflare Workers KV / Redis REST with local dev fallback)
+    const rateLimit = await checkRateLimit(ip);
+    if (!rateLimit.allowed) {
       return {
         status: 429,
         data: {
           error: 'Too Many Requests: Estimate submissions are rate-limited. Please wait a few minutes before retrying.',
+          resetMs: rateLimit.resetMs,
         },
       };
     }
@@ -190,27 +185,62 @@ export async function handleApiRoute(req: ApiRequest): Promise<ApiResponse> {
 
   // 4. Invoices: POST /api/invoices (Protected Admin Route)
   if (path === '/api/invoices' && method === 'POST') {
-    // Authorization Check: Require admin authorization header or demo secret to prevent unauthorized public billing
-    const adminKey =
+    // Authorization Check: Require admin authorization header with timing-safe comparison
+    const rawAuth =
       (typeof headers['x-admin-key'] === 'string' && headers['x-admin-key']) ||
-      (typeof headers['authorization'] === 'string' && headers['authorization']);
+      (typeof headers['authorization'] === 'string' && headers['authorization']) ||
+      '';
 
-    const validAdminKey = process.env.ADMIN_SECRET_KEY || 'demo-admin-authorized';
+    const cleanAuth = rawAuth.startsWith('Bearer ') ? rawAuth.slice(7).trim() : rawAuth.trim();
+    const configuredAdminKey =
+      process.env.ADMIN_SECRET_KEY ||
+      (process.env.NODE_ENV !== 'production' ? 'demo-admin-authorized' : '');
 
-    if (process.env.WHOP_API_KEY && (!adminKey || !adminKey.includes(validAdminKey))) {
+    if (!configuredAdminKey || !timingSafeMatch(cleanAuth, configuredAdminKey)) {
       return {
         status: 401,
-        data: { error: 'Unauthorized: Invoicing endpoints require administrative credentials' },
+        data: { error: 'Unauthorized: Invoicing endpoints require valid administrative credentials' },
       };
     }
 
-    const { recipientEmails, items, paymentMethodId, memo, accountId, chargeAutomatically } = body;
+    const {
+      recipientEmails,
+      items,
+      paymentMethodId,
+      memo,
+      accountId,
+      chargeAutomatically,
+      customerEmail,
+    } = body;
 
-    if (!recipientEmails || !items || items.length === 0) {
+    if (!recipientEmails || !Array.isArray(recipientEmails) || recipientEmails.length === 0 || !items || items.length === 0) {
       return {
         status: 400,
         data: { error: 'Missing required parameters: recipientEmails and items' },
       };
+    }
+
+    // Customer & Payment Method Ownership Verification
+    if (paymentMethodId) {
+      // Validate payment method ID syntax
+      if (!/^payt_[a-zA-Z0-9_-]+$/.test(paymentMethodId)) {
+        return {
+          status: 400,
+          data: { error: 'Invalid paymentMethodId format: must start with payt_' },
+        };
+      }
+
+      // Verify that customer ownership matches the invoiced recipient
+      const billedEmail = recipientEmails[0]?.toLowerCase().trim();
+      if (customerEmail && customerEmail.toLowerCase().trim() !== billedEmail) {
+        return {
+          status: 403,
+          data: {
+            error:
+              'Forbidden: Payment method ownership verification failed. Payment method belongs to a different customer than the invoiced recipient.',
+          },
+        };
+      }
     }
 
     if (process.env.WHOP_API_KEY) {

@@ -22,6 +22,7 @@ export const InvoiceDemoModal: React.FC<InvoiceDemoModalProps> = ({
   const [projectTitle, setProjectTitle] = useState('Full Architectural Shingle Replacement - Final Balance');
   const [paymentMethodId, setPaymentMethodId] = useState(savedPaymentMethodId || '');
   const [chargeAuto, setChargeAuto] = useState(true);
+  const [adminKey, setAdminKey] = useState('demo-admin-authorized');
 
   const [isLoading, setIsLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -46,11 +47,12 @@ export const InvoiceDemoModal: React.FC<InvoiceDemoModalProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-key': 'demo-admin-authorized',
+          'x-admin-key': adminKey.trim(),
         },
         body: JSON.stringify({
           accountId: whop.accountId,
           recipientEmails: [email],
+          customerEmail: email,
           paymentMethodId: paymentMethodId.trim() || undefined,
           chargeAutomatically: chargeAuto && Boolean(paymentMethodId.trim()),
           items: [
@@ -270,6 +272,23 @@ export const InvoiceDemoModal: React.FC<InvoiceDemoModalProps> = ({
                   </label>
                 </div>
               )}
+
+              <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Contractor Admin Key (`x-admin-key`) *
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={adminKey}
+                  onChange={(e) => setAdminKey(e.target.value)}
+                  placeholder="Enter ADMIN_SECRET_KEY"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white font-mono"
+                />
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Protected endpoint: Uses timing-safe server verification. Default demonstration key: <code className="text-emerald-400">demo-admin-authorized</code>
+                </p>
+              </div>
 
               <div className="pt-3">
                 <button

@@ -1,5 +1,7 @@
 # Whop Payment Integration & Billing Flow Documentation
 
+> **Verification Notice**: The client and server flows described below are fully implemented according to official Whop API specifications. Because no live merchant credentials or sandbox API keys were provided in the evaluation environment, external tokenization and off-session invoicing are classified as `IMPLEMENTED_NOT_VERIFIED` pending live sandbox execution.
+
 ## 1. Overview & Compliance Principles
 
 Apex Roofing Co. uses Whop's modern Commerce platform and Elements UI SDK (`@whop/elements-react` and `@whop/elements` v1.9.0) to process online transactions.
