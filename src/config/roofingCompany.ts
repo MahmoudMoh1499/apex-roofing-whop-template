@@ -154,10 +154,10 @@ export const roofingCompanyConfig: RoofingCompanyConfig = {
     },
   },
   whop: {
-    accountId: safeEnv.VITE_WHOP_ACCOUNT_ID || "biz_apexroofingdemo",
+    accountId: safeEnv.VITE_WHOP_ACCOUNT_ID || "biz_yxb2Bl22qgep3g",
     plans: {
       roofInspection: {
-        id: safeEnv.VITE_WHOP_INSPECTION_PLAN_ID || "plan_roof_inspection_149",
+        id: safeEnv.VITE_WHOP_INSPECTION_PLAN_ID || "plan_2KwvDItyoRemP",
         title: "Comprehensive 21-Point Roof Inspection",
         amount: 149,
         currency: "USD",
@@ -165,7 +165,7 @@ export const roofingCompanyConfig: RoofingCompanyConfig = {
         description: "Full drone & physical diagnostic inspection, attic moisture scan, photographic damage report, and itemized repair estimate.",
       },
       projectDeposit: {
-        id: safeEnv.VITE_WHOP_DEPOSIT_PLAN_ID || "plan_project_deposit_500",
+        id: safeEnv.VITE_WHOP_DEPOSIT_PLAN_ID || "plan_8Z1S3Yw1WjX4a",
         title: "Roofing Project Deposit & Crew Reservation",
         amount: 500,
         currency: "USD",
@@ -174,7 +174,7 @@ export const roofingCompanyConfig: RoofingCompanyConfig = {
         description: "Secures project scheduling, locks in wholesale material pricing, and establishes customer payment method for final project balance upon completion.",
       },
       flatRateService: {
-        id: safeEnv.VITE_WHOP_SERVICE_PLAN_ID || "plan_flat_rate_repair_899",
+        id: safeEnv.VITE_WHOP_SERVICE_PLAN_ID || "plan_i2sQTyDeCoYq3",
         title: "Flat-Rate Emergency Roof Repair",
         amount: 899,
         currency: "USD",

@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "apex-roofing-co",
+  "compatibility_date": "2026-11-06",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "src/server/worker.ts",
+  "assets": {
+    "directory": "dist/client"
+  }
+}

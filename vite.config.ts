@@ -1,5 +1,6 @@
 import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { cloudflare } from "@cloudflare/vite-plugin";
 import { whop } from "@whop/cli/vite";
 import path from "node:path";
 import { handleApiRoute } from "./src/server/api";
@@ -50,6 +51,7 @@ function apiMiddlewarePlugin(): Plugin {
 
 export default defineConfig({
   plugins: [
+    cloudflare(),
     react(),
     apiMiddlewarePlugin(),
     whop(),
